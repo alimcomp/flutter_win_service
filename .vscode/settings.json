@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "service.h": "c",
+        "win_service.h": "c",
+        "xlocnum": "cpp",
+        "mutex": "c",
+        "result_struct.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
+}

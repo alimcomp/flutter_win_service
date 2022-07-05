@@ -4,7 +4,8 @@
         "win_service.h": "c",
         "xlocnum": "cpp",
         "mutex": "c",
-        "result_struct.h": "c"
+        "result_struct.h": "c",
+        "xstring": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

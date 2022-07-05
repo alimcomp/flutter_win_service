@@ -36,6 +36,16 @@ LPWSTR _serviceName = L"";
 ////
 ////  COMMENTS:
 ////
+
+// void updateServiceStatus(DWORD status)
+// {
+//     if (dart_port == 0)
+//         return;
+//     Dart_CObject msg;
+//     msg.type = Dart_CObject_kString;
+//     // msg.value.as_int64 = status;
+//     Dart_PostCObject_DL(dart_port, &msg);
+// }
 LPTSTR GetLastErrorText()
 {
     LPVOID lpMsgBuf;
@@ -120,9 +130,6 @@ void ReportProgressStatus(DWORD state, DWORD checkPoint, DWORD waitHint)
 
 void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
-    Beep(523, 500);
-    // Must be called at start.
-
     g_ServiceStatusHandle = RegisterServiceCtrlHandlerEx(_serviceName, &HandlerEx, NULL);
 
     // Startup code.
@@ -131,6 +138,7 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
     /* Here initialize service...
     Load configuration, acquire resources etc. */
     ReportStatus(SERVICE_RUNNING);
+
     // This sample service does "BEEP!" every 3 seconds.
 
     /* Main service code
@@ -139,7 +147,7 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
     wait or poll for g_StopEvent... */
     // FILE *fp;
     // fopen_s(&fp, "C:\\my_file.txt", "w+");
-    while (WaitForSingleObject(g_StopEvent, 500) != WAIT_OBJECT_0)
+    while (WaitForSingleObject(g_StopEvent, INFINITE) != WAIT_OBJECT_0)
     {
 
         // fputs("Start.\n", fp);
@@ -148,7 +156,8 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
         // fputs("dart port is ok.\n", fp);
         Dart_CObject msg;
         msg.type = Dart_CObject_kString;
-        msg.value.as_string = (char *)" hello from c to dart";
+        msg.value.as_int64 = SERVICE_RUNNING;
+        //msg.value.as_string = (char *)" hello from c to dart";
         // The function is thread-safe; you can call it anywhere on your C++ code
         Dart_PostCObject_DL(dart_port, &msg);
         // DWORD error = GetLastError();
@@ -168,6 +177,7 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
     // fputs("service stoped.\n", fp);
     // fclose(fp);
     ReportStatus(SERVICE_STOP_PENDING);
+
     /* Here finalize service...
     Save all unsaved data etc., but do it quickly.
     If g_SystemShutdown, you can skip freeing memory etc. */
@@ -176,13 +186,233 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 }
 // Create a string with last error message
 
-ResultStruct start_service(Dart_Port_DL port, LPWSTR serviceName)
+ServiceStatusStruct get_service_status(LPWSTR serviceName)
+{
+    struct ServiceStatusStruct result;
+    SC_HANDLE schService;
+    SC_HANDLE schSCManager;
+
+    schSCManager = OpenSCManager(
+        NULL,                 // machine (NULL == local)
+        NULL,                 // database (NULL == default)
+        SC_MANAGER_ALL_ACCESS // access required
+    );
+    if (schSCManager)
+    {
+        schService = OpenService(schSCManager, serviceName, SERVICE_ALL_ACCESS);
+
+        if (schService)
+        {
+            if (QueryServiceStatus(schService, &g_ssStatus))
+            {
+
+                result.dwServiceType = g_ssStatus.dwServiceType;
+                result.dwCurrentState = g_ssStatus.dwCurrentState;
+                result.dwControlsAccepted = g_ssStatus.dwControlsAccepted;
+                result.dwWin32ExitCode = g_ssStatus.dwWin32ExitCode;
+                result.dwServiceSpecificExitCode = g_ssStatus.dwServiceSpecificExitCode;
+                result.dwCheckPoint = g_ssStatus.dwCheckPoint;
+                result.dwWaitHint = g_ssStatus.dwWaitHint;
+                result.status = true;
+            }
+            else
+            {
+                result.status = false;
+                result.code = GetLastError();
+                result.message = GetLastErrorText();
+            }
+            CloseServiceHandle(schService);
+        }
+        else
+        {
+            result.status = false;
+            result.code = GetLastError();
+            result.message = GetLastErrorText();
+        }
+
+        CloseServiceHandle(schSCManager);
+    }
+    else
+    {
+        result.status = false;
+        result.code = GetLastError();
+        result.message = GetLastErrorText();
+    }
+    return result;
+}
+
+ResultStruct start_service(LPWSTR serviceName)
+{
+    DWORD dwSize = 0;
+    BYTE *pVersionInfo = NULL;
+    VS_FIXEDFILEINFO *pFileInfo = NULL;
+    UINT pLenFileInfo = 0;
+    LPWSTR pFilePath = L"C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\service_start.exe";
+
+    struct ResultStruct result;
+    SC_HANDLE schService;
+    SC_HANDLE schSCManager;
+
+    SERVICE_STATUS ssStatus;
+    DWORD dwOldCheckPoint;
+    DWORD dwStartTickCount;
+    DWORD dwWaitTime;
+
+    schSCManager = OpenSCManager(
+        NULL,                 // machine (NULL == local)
+        NULL,                 // database (NULL == default)
+        SC_MANAGER_ALL_ACCESS // access required
+    );
+    if (schSCManager)
+    {
+        schService = OpenService(
+            schSCManager,      // SCManager database
+            serviceName,       // name of service
+            SERVICE_ALL_ACCESS // desired access
+        );                     // no password
+
+        if (schService)
+        {
+            // service opend so try to start it
+            if (!StartService(schService, 0, NULL))
+            {
+                result.status = false;
+                result.code = GetLastError();
+                result.message = GetLastErrorText();
+            }
+            else
+            {
+                // service gone to pending mode so wati till it runnig state
+                if (!QueryServiceStatus(schService, &ssStatus))
+                {
+                    // error in getting service status
+
+                    result.status = false;
+                    result.code = GetLastError();
+                    result.message = GetLastErrorText();
+                }
+                else
+                {
+                    // service status retrived successfully
+                    // Save the tick count and initial checkpoint.
+
+                    dwStartTickCount = GetTickCount();
+                    dwOldCheckPoint = ssStatus.dwCheckPoint;
+
+                    while (ssStatus.dwCurrentState == SERVICE_START_PENDING)
+
+                    {
+
+                        // Just some info...
+
+                        printf("Wait Hint: %d\n", ssStatus.dwWaitHint);
+
+                        // Do not wait longer than the wait hint. A good interval is one tenth the wait hint, but no less than 1 second and no more than 10 seconds...
+
+                        dwWaitTime = ssStatus.dwWaitHint / 10;
+
+                        if (dwWaitTime<1000> 10000)
+
+                            dwWaitTime = 10000;
+
+                        Sleep(dwWaitTime);
+
+                        // Check the status again...
+
+                        if (!QueryServiceStatus(
+
+                                schService, // handle to service
+
+                                &ssStatus)) // address of structure
+
+                            break;
+
+                        if (ssStatus.dwCheckPoint > dwOldCheckPoint)
+
+                        {
+
+                            // The service is making progress...
+
+                            printf("Service starting in progress...\n");
+
+                            dwStartTickCount = GetTickCount();
+
+                            dwOldCheckPoint = ssStatus.dwCheckPoint;
+                        }
+
+                        else
+
+                        {
+
+                            if ((GetTickCount() - dwStartTickCount) > ssStatus.dwWaitHint)
+
+                            {
+
+                                // No progress made within the wait hint
+
+                                printf("Well, starting the service looks no progress...\n");
+
+                                break;
+                            }
+                        }
+                    }
+
+                    if (ssStatus.dwCurrentState == SERVICE_RUNNING)
+
+                    {
+                        // service start successfuly
+                        result.status = true;
+                        result.code = 0;
+                    }
+
+                    else
+
+                    {
+
+                        // printf("\nService %S not started.\n", lpszServiceName);
+
+                        // printf(" Current State: %d\n", ssStatus.dwCurrentState);
+
+                        // printf(" Exit Code: %d\n", ssStatus.dwWin32ExitCode);
+
+                        // printf(" Service Specific Exit Code: %d\n", ssStatus.dwServiceSpecificExitCode);
+
+                        // printf(" Check Point: %d\n", ssStatus.dwCheckPoint);
+
+                        // printf(" Wait Hint: %d\n", ssStatus.dwWaitHint);
+                        result.status = false;
+                        result.code = GetLastError();
+                        result.message = GetLastErrorText();
+                    }
+                }
+            }
+
+            CloseServiceHandle(schService);
+        }
+        else
+        {
+            result.status = false;
+            result.code = GetLastError();
+            result.message = GetLastErrorText();
+        }
+
+        CloseServiceHandle(schSCManager);
+    }
+    else
+    {
+        result.status = false;
+        result.code = GetLastError();
+        result.message = GetLastErrorText();
+    }
+
+    return result;
+}
+
+ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName)
 {
     struct ResultStruct result;
     _serviceName = serviceName;
     dart_port = port;
-
-    Beep(523, 500);
 
     SERVICE_TABLE_ENTRY serviceTable[] = {
         {serviceName, &ServiceMain},
@@ -208,7 +438,7 @@ ResultStruct start_service(Dart_Port_DL port, LPWSTR serviceName)
     //     return -2; // Other error.
 }
 
-ResultStruct install_service(LPWSTR serviceName, LPWSTR serviceDisplayName, LPWSTR appPath)
+ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceDisplayName, LPWSTR appPath)
 {
     struct ResultStruct result;
     SC_HANDLE schService;
@@ -238,10 +468,24 @@ ResultStruct install_service(LPWSTR serviceName, LPWSTR serviceDisplayName, LPWS
 
         if (schService)
         {
-            // service installed
-            CloseServiceHandle(schService);
-            result.status = true;
-            result.code = 0;
+            SERVICE_DESCRIPTION sdBuf;
+            sdBuf.lpDescription = version;
+            if (ChangeServiceConfig2(
+                    schService,
+                    SERVICE_CONFIG_DESCRIPTION,
+                    &sdBuf))
+            {
+                // service installed
+                CloseServiceHandle(schService);
+                result.status = true;
+                result.code = 0;
+            }
+            else
+            {
+                result.status = false;
+                result.code = GetLastError();
+                result.message = GetLastErrorText();
+            }
         }
         else
         {
@@ -340,6 +584,85 @@ ResultStruct remove_service(LPWSTR serviceName)
     }
     return result;
 }
+
+ResultStruct get_version(LPWSTR serviceName)
+{
+    struct ResultStruct result;
+    SC_HANDLE schService;
+    SC_HANDLE schSCManager;
+
+    schSCManager = OpenSCManager(
+        NULL,                // machine (NULL == local)
+        NULL,                // database (NULL == default)
+        SERVICE_QUERY_CONFIG // access required
+    );
+    if (schSCManager)
+    {
+        schService = OpenService(schSCManager, serviceName, SERVICE_ALL_ACCESS);
+
+        if (schService)
+        {
+            DWORD returnLength;
+            LPSERVICE_DESCRIPTION descriptionInfo;
+            if (!QueryServiceConfig2(schService, SERVICE_CONFIG_DESCRIPTION, NULL, 0, &returnLength))
+            {
+
+                if (ERROR_INSUFFICIENT_BUFFER == GetLastError())
+                {
+
+                    descriptionInfo = (LPSERVICE_DESCRIPTION)LocalAlloc(LMEM_FIXED, returnLength);
+                    if (QueryServiceConfig2(
+                            schService,
+                            SERVICE_CONFIG_DESCRIPTION,
+                            (LPBYTE)descriptionInfo,
+                            returnLength,
+                            &returnLength))
+                    {
+                        result.status = true;
+                        result.code = 0;
+                        result.message = descriptionInfo->lpDescription;
+                    }
+                    else
+                    {
+                        result.status = false;
+                        result.code = GetLastError();
+                        result.message = GetLastErrorText();
+                    }
+                }
+                else
+                {
+                    result.status = false;
+                    result.code = GetLastError();
+                    result.message = GetLastErrorText();
+                }
+            }
+            else
+            {
+                result.status = false;
+                result.code = GetLastError();
+                result.message = GetLastErrorText();
+            }
+            // descriptionInfo.lpDescription;
+            CloseServiceHandle(schService);
+        }
+        else
+        {
+            result.status = false;
+            result.code = GetLastError();
+            result.message = GetLastErrorText();
+        }
+
+        CloseServiceHandle(schSCManager);
+    }
+    else
+    {
+        result.status = false;
+        result.code = GetLastError();
+        result.message = GetLastErrorText();
+    }
+    return result;
+}
+
 //
 //
 //

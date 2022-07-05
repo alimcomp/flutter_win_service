@@ -1,11 +1,55 @@
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
+
+import 'package:service/result_struct.dart';
+import 'package:service/service_status.dart';
 
 import 'service_bindings_generated.dart';
 
-startService(String serviceName) => _bindings.startService(serviceName);
-installService(String serviceName, String serviceDisplayName, String appPath) =>
-    _bindings.installService(serviceName, serviceDisplayName, appPath);
+Future<void> startService(String serviceName) async {
+  /// Where I listen to the message from startServiceIsolate
+  Completer<void> resultComplater = Completer();
+  final mainReceivePort = ReceivePort();
+
+  mainReceivePort.listen((message) {
+    if (message is SendPort) {
+      message.send(serviceName);
+    } else if (message is ResultStruct) {
+      if (!message.status) {
+        resultComplater.completeError(message.exception);
+      } else {
+        resultComplater.complete();
+      }
+      // todo think about canclation
+    }
+  });
+
+  Isolate.spawn((SendPort sendPort) async {
+    final ReceivePort startServiceIsolatePort = ReceivePort();
+    startServiceIsolatePort.listen((message) {
+      if (message is String) {
+        final result = _bindings.startService(message);
+        sendPort.send(result);
+      }
+    });
+    sendPort.send(startServiceIsolatePort.sendPort);
+  }, mainReceivePort.sendPort);
+
+  return resultComplater.future;
+}
+
+ServiceStatus getServiceStatus(String serviceName) =>
+    _bindings.getServiceStatus(serviceName);
+
+String getVersion(String serviceName) => _bindings.getVersion(serviceName);
+//startService(String serviceName) => _bindings.startService(serviceName);
+removeService(String serviceName) => _bindings.removeService(serviceName);
+initService(String serviceName) => _bindings.initService(serviceName);
+installService(String serviceName, String version, String serviceDisplayName,
+        String appPath) =>
+    _bindings.installService(serviceName, version, serviceDisplayName, appPath);
 
 const String _libName = 'service';
 Stream<String> get serviceStream => _bindings.serviceStream;

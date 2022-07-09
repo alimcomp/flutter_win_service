@@ -5,7 +5,10 @@
         "xlocnum": "cpp",
         "mutex": "c",
         "result_struct.h": "c",
-        "xstring": "c"
+        "xstring": "c",
+        "functional": "c",
+        "type_traits": "c",
+        "xtr1common": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

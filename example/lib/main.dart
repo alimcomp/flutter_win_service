@@ -19,10 +19,20 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late int sumResult;
   late Future<int> sumAsyncResult;
-
+  late StreamSubscription statusSubscription;
   @override
   void initState() {
     super.initState();
+    // service.initService("GposSyncer");
+    // statusSubscription = service.notificationStream.listen((event) {
+    //   print(event);
+    // });
+  }
+
+  @override
+  void dispose() {
+    statusSubscription.cancel();
+    super.dispose();
   }
 
   @override

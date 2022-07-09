@@ -43,6 +43,45 @@ class ServiceBindings {
   late final _Dart_InitializeApiDL = _Dart_InitializeApiDLPtr.asFunction<
       int Function(ffi.Pointer<ffi.Void>)>();
 
+  ///
+  ///service_set_service_status_change_notify
+  ///
+  // late final _initServicePtr = _lookup<
+  //     ffi.NativeFunction<
+  //         ResultStruct Function(
+  //             ffi.Int64, ffi.Pointer<Utf16>)>>("service_init_service");
+  // late final _initService = _initServicePtr
+  //     .asFunction<ResultStruct Function(int, ffi.Pointer<Utf16>)>();
+
+  // final StreamController<ServiceStatus> _notificationCtrl =
+  //     StreamController.broadcast();
+  // Stream<ServiceStatus> get notificationStream => _notificationCtrl.stream;
+  // int? startCookie;
+  // initService(String serviceName) {
+  //   startCookie ??= _Dart_InitializeApiDL(ffi.NativeApi.initializeApiDLData);
+  //   // Call Dart_InitializeApiDL with NativeApi.initializeApiDLData
+
+  //   final pub = ReceivePort()
+  //     ..listen((message) async {
+  //       final pointer =
+  //           ffi.Pointer<ServiceStatusStruct>.fromAddress(message as int);
+
+  //       final ref = pointer.ref;
+  //       _notificationCtrl.add(ref.toServiceStatus);
+  //       calloc.free(pointer);
+  //     });
+
+  //   // Pass NativePort value (int) to C++ code
+  //   final result =
+  //       _initService(pub.sendPort.nativePort, serviceName.toNativeUtf16());
+
+  //   if (!result.status) throw result.exception;
+  // }
+
+  ///
+  /// get service status
+  ///
+//
   late final _getServiceStatusPtr = _lookup<
           ffi.NativeFunction<ServiceStatusStruct Function(ffi.Pointer<Utf16>)>>(
       "service_get_service_status");
@@ -99,8 +138,6 @@ class ServiceBindings {
 
   bindService(String serviceName) {
     cookie ??= _Dart_InitializeApiDL(ffi.NativeApi.initializeApiDLData);
-    _servecCtrl.add(ServiceStatus(Status.unknown));
-
     final pub = ReceivePort()
       ..listen((message) async {
         final pointer =
@@ -108,8 +145,7 @@ class ServiceBindings {
 
         final ref = pointer.ref;
         _servecCtrl.add(ref.toServiceStatus);
-
-        //   calloc.free(pointer);
+        calloc.free(pointer);
       });
 
     // Pass NativePort value (int) to C++ code

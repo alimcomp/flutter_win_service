@@ -194,6 +194,16 @@ ServiceStatusStruct get_service_status(LPWSTR serviceName)
     return result;
 }
 
+// static VOID CALLBACK NotifyCallBack(PVOID parameter)
+// {
+//     SERVICE_NOTIFY *ServiceNotify;
+//     HANDLE EventHandle;
+
+//     ServiceNotify = (SERVICE_NOTIFY *)parameter;
+//     EventHandle = *(HANDLE *)ServiceNotify->pContext;
+//     SetEvent(EventHandle);
+// }
+
 ResultStruct start_service(LPWSTR serviceName)
 {
     DWORD dwSize = 0;
@@ -610,6 +620,18 @@ ResultStruct get_version(LPWSTR serviceName)
     }
     return result;
 }
+
+// ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName)
+// {
+//     status_change_dart_port = port;
+//     struct ResultStruct result;
+
+//     result.status = true;
+//     result.code = GetLastError();
+//     result.message = L"Port set successfully";
+
+//     return result;
+// }
 
 //
 //

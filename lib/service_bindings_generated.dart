@@ -145,7 +145,7 @@ class ServiceBindings {
 
         final ref = pointer.ref;
         _servecCtrl.add(ref.toServiceStatus);
-        calloc.free(pointer);
+        // calloc.free(pointer);
       });
 
     // Pass NativePort value (int) to C++ code

@@ -1,4 +1,3 @@
-Status.unknown
 Status.startPending
 Status.running
 Status.stopPending

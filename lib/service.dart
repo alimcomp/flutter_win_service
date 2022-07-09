@@ -8,10 +8,14 @@ import 'package:service/service_status.dart';
 
 import 'service_bindings_generated.dart';
 
+// Stream<ServiceStatus> get notificationStream => _bindings.notificationStream;
+// initService(String serviceName) => _bindings.initService(serviceName);
+
 Future<void> startService(String serviceName) async {
   /// Where I listen to the message from startServiceIsolate
   Completer<void> resultComplater = Completer();
   final mainReceivePort = ReceivePort();
+  Isolate? test;
 
   mainReceivePort.listen((message) {
     if (message is SendPort) {
@@ -22,11 +26,12 @@ Future<void> startService(String serviceName) async {
       } else {
         resultComplater.complete();
       }
+      test?.kill();
       // todo think about canclation
     }
   });
 
-  Isolate.spawn((SendPort sendPort) async {
+  test = await Isolate.spawn((SendPort sendPort) async {
     final ReceivePort startServiceIsolatePort = ReceivePort();
     startServiceIsolatePort.listen((message) {
       if (message is String) {
@@ -46,13 +51,13 @@ ServiceStatus getServiceStatus(String serviceName) =>
 String getVersion(String serviceName) => _bindings.getVersion(serviceName);
 //startService(String serviceName) => _bindings.startService(serviceName);
 removeService(String serviceName) => _bindings.removeService(serviceName);
-initService(String serviceName) => _bindings.initService(serviceName);
+bindService(String serviceName) => _bindings.bindService(serviceName);
 installService(String serviceName, String version, String serviceDisplayName,
         String appPath) =>
     _bindings.installService(serviceName, version, serviceDisplayName, appPath);
 
 const String _libName = 'service';
-Stream<String> get serviceStream => _bindings.serviceStream;
+Stream<ServiceStatus> get serviceStream => _bindings.serviceStream;
 
 /// The dynamic library in which the symbols for [ServiceBindings] can be found.
 final DynamicLibrary _dylib = () {

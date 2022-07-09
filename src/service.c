@@ -7,7 +7,9 @@ FFI_PLUGIN_EXPORT ServiceStatusStruct service_get_service_status(wchar_t *servic
 {
   return get_service_status(serviceName);
 }
-FFI_PLUGIN_EXPORT ResultStruct service_get_version(wchar_t *serviceName){
+
+FFI_PLUGIN_EXPORT ResultStruct service_get_version(wchar_t *serviceName)
+{
   return get_version(serviceName);
 }
 
@@ -16,9 +18,9 @@ FFI_PLUGIN_EXPORT ResultStruct service_start_service(wchar_t *serviceName)
   return start_service(serviceName);
 }
 
-FFI_PLUGIN_EXPORT ResultStruct service_init_service(Dart_Port_DL port, wchar_t *serviceName)
+FFI_PLUGIN_EXPORT ResultStruct service_bind_service(Dart_Port_DL port, wchar_t *serviceName)
 {
-  return init_service(port, serviceName);
+  return bind_service(port, serviceName);
 }
 
 FFI_PLUGIN_EXPORT ResultStruct service_install_service(wchar_t *serviceName,wchar_t *version, wchar_t *serviceDisplayName, wchar_t *appPath)

@@ -47,7 +47,7 @@ class _MyAppState extends State<MyApp> {
                           onPressed: () {
                             try {
                               final version = service.getVersion(
-                                "SimpleService",
+                                "GposSyncer",
                               );
 
                               print(version);
@@ -68,9 +68,9 @@ class _MyAppState extends State<MyApp> {
                               final basePath = dir.substring(0, lastIndex);
 
                               service.installService(
-                                "SimpleService",
-                                "1.0.0.1",
-                                "Gpos application syncer service",
+                                "GposSyncer",
+                                "1.1.0.1",
+                                "GPOS SYNC",
                                 "C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\service_start.exe",
                               );
                             } catch (e) {
@@ -85,7 +85,7 @@ class _MyAppState extends State<MyApp> {
                           onPressed: () async {
                             try {
                               final serviceStats =
-                                  service.getServiceStatus("SimpleService");
+                                  service.getServiceStatus("GposSyncer");
                               print(serviceStats.status);
                             } catch (e) {
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -97,9 +97,9 @@ class _MyAppState extends State<MyApp> {
                         OutlinedButton(
                           onPressed: () {
                             try {
-                              service.initService(
-                                "SimpleService",
-                              );
+                              // service.initService(
+                              //   "GposSyncer",
+                              // );
                             } catch (e) {
                               print(e);
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -111,8 +111,7 @@ class _MyAppState extends State<MyApp> {
                         OutlinedButton(
                           onPressed: () async {
                             try {
-                              await service.startService("SimpleService");
-                              print("service started");
+                              await service.startService("GposSyncer");
                             } catch (e) {
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                                   SnackBar(content: Text(e.toString())));
@@ -123,7 +122,7 @@ class _MyAppState extends State<MyApp> {
                         OutlinedButton(
                           onPressed: () {
                             try {
-                              service.removeService("SimpleService");
+                              service.removeService("GposSyncer");
                             } catch (e) {
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                                   SnackBar(content: Text(e.toString())));

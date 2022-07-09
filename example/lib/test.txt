@@ -1,0 +1,6 @@
+Status.unknown
+Status.startPending
+Status.running
+Status.stopPending
+Status.stopPending
+Status.stopped

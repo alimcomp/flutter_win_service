@@ -1,13 +1,20 @@
-import 'package:service/service.dart' as service;
-import 'dart:convert';
 import 'dart:io';
 
+import 'package:service/service.dart' as service;
+
 void main(List<String> args) {
-  final test = service.initService("SimpleService");
   File file = File(
       'C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\test.txt');
-  file.writeAsStringSync("$test\n", mode: FileMode.append);
+  // file.writeAsStringSync("hello\n", mode: FileMode.append);
   service.serviceStream.listen((event) {
-    file.writeAsStringSync("$event\n", mode: FileMode.append);
+    File file = File(
+        'C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\test.txt');
+    file.writeAsStringSync("${event.status}\n", mode: FileMode.append);
+    // if (event.status == Status.running) {
+    //   file.writeAsStringSync("service start on background ",
+    //       mode: FileMode.append);
+    // }
   });
+
+  service.bindService("GposSyncer");
 }

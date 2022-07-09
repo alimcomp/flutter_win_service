@@ -6,46 +6,17 @@
 #include <tchar.h>
 #include "include/result_struct.h"
 #include "include/win_service.h"
-//
-//#include "service.h"
-
-// Main function to be executed as entire service code.
-// Handler for service control events.
-
-//////////////////////////////////////////////////////////////////////////////
+ 
 
 SERVICE_STATUS_HANDLE g_ServiceStatusHandle;
 SERVICE_STATUS g_ssStatus;
 HANDLE g_StopEvent;
 DWORD g_CurrentState = 0;
 DWORD g_SystemShutdown = 0;
+
 static Dart_Port_DL dart_port = 0;
 LPWSTR _serviceName = L"";
 
-////
-////  FUNCTION: GetLastErrorText
-////
-////  PURPOSE: copies error message text to string
-////
-////  PARAMETERS:
-////    lpszBuf - destination buffer
-////    dwSize - size of buffer
-////
-////  RETURN VALUE:
-////    destination buffer
-////
-////  COMMENTS:
-////
-
-// void updateServiceStatus(DWORD status)
-// {
-//     if (dart_port == 0)
-//         return;
-//     Dart_CObject msg;
-//     msg.type = Dart_CObject_kString;
-//     // msg.value.as_int64 = status;
-//     Dart_PostCObject_DL(dart_port, &msg);
-// }
 LPTSTR GetLastErrorText()
 {
     LPVOID lpMsgBuf;
@@ -76,6 +47,20 @@ void ReportStatus(DWORD state)
         0,
     };
     SetServiceStatus(g_ServiceStatusHandle, &serviceStatus);
+
+    if (dart_port != 0)
+    {
+        ServiceStatusStruct *result = (ServiceStatusStruct *)malloc(sizeof(ServiceStatusStruct));
+
+        result->dwCurrentState = serviceStatus.dwCurrentState;
+
+        Dart_CObject msg;
+        msg.type = Dart_CObject_kInt64;
+
+        msg.value.as_int64 = (intptr_t)(result);
+
+        Dart_PostCObject_DL(dart_port, &msg);
+    }
 }
 DWORD WINAPI HandlerEx(DWORD control, DWORD eventType, void *eventData, void *context)
 {
@@ -135,47 +120,14 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
     // Startup code.
     ReportStatus(SERVICE_START_PENDING);
     g_StopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    /* Here initialize service...
-    Load configuration, acquire resources etc. */
     ReportStatus(SERVICE_RUNNING);
 
-    // This sample service does "BEEP!" every 3 seconds.
-
-    /* Main service code
-    *
-    Loop, do some work, block if nothing to do,
-    wait or poll for g_StopEvent... */
-    // FILE *fp;
-    // fopen_s(&fp, "C:\\my_file.txt", "w+");
     while (WaitForSingleObject(g_StopEvent, INFINITE) != WAIT_OBJECT_0)
     {
 
-        // fputs("Start.\n", fp);
-        if (dart_port == 0)
-            return;
-        // fputs("dart port is ok.\n", fp);
-        Dart_CObject msg;
-        msg.type = Dart_CObject_kString;
-        msg.value.as_int64 = SERVICE_RUNNING;
-        //msg.value.as_string = (char *)" hello from c to dart";
-        // The function is thread-safe; you can call it anywhere on your C++ code
-        Dart_PostCObject_DL(dart_port, &msg);
-        // DWORD error = GetLastError();
-        // if (error != 0)
-        // {
-        //     // wchar_t err[256];
-        //     // // memset(err, 0, 256);
-        //     // FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error,
-        //     //                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err, 255, NULL);
-
-        //     // fprintf(fp, "%ls", err);
-        //     // //                 fprintf(fp, "This is testing for fprintf...\n");
-        // }
-
-        // fprintf(fp, message);
+    
     }
-    // fputs("service stoped.\n", fp);
-    // fclose(fp);
+
     ReportStatus(SERVICE_STOP_PENDING);
 
     /* Here finalize service...
@@ -203,6 +155,7 @@ ServiceStatusStruct get_service_status(LPWSTR serviceName)
 
         if (schService)
         {
+
             if (QueryServiceStatus(schService, &g_ssStatus))
             {
 
@@ -404,11 +357,10 @@ ResultStruct start_service(LPWSTR serviceName)
         result.code = GetLastError();
         result.message = GetLastErrorText();
     }
-
     return result;
 }
 
-ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName)
+ResultStruct bind_service(Dart_Port_DL port, LPWSTR serviceName)
 {
     struct ResultStruct result;
     _serviceName = serviceName;
@@ -423,19 +375,15 @@ ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName)
         result.status = true;
         result.code = 0;
     }
-
     else
     {
         result.status = false;
         result.code = GetLastError();
         result.message = GetLastErrorText();
-        // return GetLastError();
     }
     return result;
     // else if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
-    //     return -1; // Program not started as a service.
-    // else
-    //     return -2; // Other error.
+
 }
 
 ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceDisplayName, LPWSTR appPath)

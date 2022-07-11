@@ -14,6 +14,7 @@ import 'package:service/service_status.dart';
 
 import 'result_struct.dart';
 import 'service_status_struct.dart';
+import 'service_struct.dart';
 
 /// Bindings for `src/service.h`.
 ///
@@ -46,37 +47,41 @@ class ServiceBindings {
   ///
   ///service_set_service_status_change_notify
   ///
-  // late final _initServicePtr = _lookup<
-  //     ffi.NativeFunction<
-  //         ResultStruct Function(
-  //             ffi.Int64, ffi.Pointer<Utf16>)>>("service_init_service");
-  // late final _initService = _initServicePtr
-  //     .asFunction<ResultStruct Function(int, ffi.Pointer<Utf16>)>();
+  late final _initServicePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          "service_init_service");
+  late final _initService = _initServicePtr.asFunction<void Function(int)>();
 
-  // final StreamController<ServiceStatus> _notificationCtrl =
-  //     StreamController.broadcast();
-  // Stream<ServiceStatus> get notificationStream => _notificationCtrl.stream;
-  // int? startCookie;
-  // initService(String serviceName) {
-  //   startCookie ??= _Dart_InitializeApiDL(ffi.NativeApi.initializeApiDLData);
-  //   // Call Dart_InitializeApiDL with NativeApi.initializeApiDLData
+  final StreamController<ServiceStatus> _serviceStatusCtrl = StreamController();
+  Stream<ServiceStatus> get serviceStatusStream => _serviceStatusCtrl.stream;
+  int? startCookie;
+  initService() {
+    startCookie ??= _Dart_InitializeApiDL(ffi.NativeApi.initializeApiDLData);
+    // Call Dart_InitializeApiDL with NativeApi.initializeApiDLData
+    final pub = ReceivePort()
+      ..listen((message) async {
+        final pointer = ffi.Pointer<ServiceStatusStruct>.fromAddress(message as int);
+        final ref = pointer.ref;
+        _serviceStatusCtrl.add(ref.toServiceStatus);
+        // calloc.free(pointer);
+      });
+    _initService(
+      pub.sendPort.nativePort,
+    );
+  }
 
-  //   final pub = ReceivePort()
-  //     ..listen((message) async {
-  //       final pointer =
-  //           ffi.Pointer<ServiceStatusStruct>.fromAddress(message as int);
+  ///
+  ///service_watach_service_status
+  ///
 
-  //       final ref = pointer.ref;
-  //       _notificationCtrl.add(ref.toServiceStatus);
-  //       calloc.free(pointer);
-  //     });
-
-  //   // Pass NativePort value (int) to C++ code
-  //   final result =
-  //       _initService(pub.sendPort.nativePort, serviceName.toNativeUtf16());
-
-  //   if (!result.status) throw result.exception;
-  // }
+  late final _watchServicePtr =
+      _lookup<ffi.NativeFunction<ResultStruct Function(ffi.Pointer<Utf16>)>>(
+          "service_watach_service_status");
+  late final _watchService =
+      _watchServicePtr.asFunction<ResultStruct Function(ffi.Pointer<Utf16>)>();
+  ResultStruct watchService(String serviceName) {
+    return _watchService(serviceName.toNativeUtf16());
+  }
 
   ///
   /// get service status
@@ -113,7 +118,7 @@ class ServiceBindings {
   ///
   ///start service function
   ///
-//FFI_PLUGIN_EXPORT ResultStruct service_start_service(wchar_t *serviceExeFile, wchar_t *serviceExeDirectory)
+
   late final _startServicePtr =
       _lookup<ffi.NativeFunction<ResultStruct Function(ffi.Pointer<Utf16>)>>(
           "service_start_service");

@@ -8,8 +8,43 @@ import 'package:service/service_status.dart';
 
 import 'service_bindings_generated.dart';
 
-// Stream<ServiceStatus> get notificationStream => _bindings.notificationStream;
-// initService(String serviceName) => _bindings.initService(serviceName);
+Stream<ServiceStatus> get serviceStatusStream => _bindings.serviceStatusStream;
+
+void initService() => _bindings.initService();
+
+Future<void> watchService(String serviceName) async {
+  /// Where I listen to the message from startServiceIsolate
+  Completer<void> resultComplater = Completer();
+  final mainReceivePort = ReceivePort();
+  Isolate? test;
+
+  mainReceivePort.listen((message) {
+    if (message is SendPort) {
+      message.send(serviceName);
+    } else if (message is ResultStruct) {
+      if (!message.status) {
+        resultComplater.completeError(message.exception);
+      } else {
+        resultComplater.complete();
+      }
+      test?.kill();
+      // todo think about canclation
+    }
+  });
+
+  test = await Isolate.spawn((SendPort sendPort) async {
+    final ReceivePort watchServiceIsolatePort = ReceivePort();
+    watchServiceIsolatePort.listen((message) {
+      if (message is String) {
+        final result = _bindings.watchService(message);
+        sendPort.send(result);
+      }
+    });
+    sendPort.send(watchServiceIsolatePort.sendPort);
+  }, mainReceivePort.sendPort);
+
+  return resultComplater.future;
+}
 
 Future<void> startService(String serviceName) async {
   /// Where I listen to the message from startServiceIsolate

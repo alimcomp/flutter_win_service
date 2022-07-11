@@ -6,7 +6,11 @@
 #include <tchar.h>
 #include "include/result_struct.h"
 #include "include/win_service.h"
- 
+
+typedef struct _NOTIFY_CONTEXT
+{
+    PTSTR pszServiceName;
+} NOTIFY_CONTEXT, *PNOTIFY_CONTEXT;
 
 SERVICE_STATUS_HANDLE g_ServiceStatusHandle;
 SERVICE_STATUS g_ssStatus;
@@ -15,6 +19,7 @@ DWORD g_CurrentState = 0;
 DWORD g_SystemShutdown = 0;
 
 static Dart_Port_DL dart_port = 0;
+static Dart_Port_DL status_change_dart_port = 0;
 LPWSTR _serviceName = L"";
 
 LPTSTR GetLastErrorText()
@@ -60,6 +65,7 @@ void ReportStatus(DWORD state)
         msg.value.as_int64 = (intptr_t)(result);
 
         Dart_PostCObject_DL(dart_port, &msg);
+   
     }
 }
 DWORD WINAPI HandlerEx(DWORD control, DWORD eventType, void *eventData, void *context)
@@ -124,8 +130,6 @@ void WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 
     while (WaitForSingleObject(g_StopEvent, INFINITE) != WAIT_OBJECT_0)
     {
-
-    
     }
 
     ReportStatus(SERVICE_STOP_PENDING);
@@ -193,16 +197,6 @@ ServiceStatusStruct get_service_status(LPWSTR serviceName)
     }
     return result;
 }
-
-// static VOID CALLBACK NotifyCallBack(PVOID parameter)
-// {
-//     SERVICE_NOTIFY *ServiceNotify;
-//     HANDLE EventHandle;
-
-//     ServiceNotify = (SERVICE_NOTIFY *)parameter;
-//     EventHandle = *(HANDLE *)ServiceNotify->pContext;
-//     SetEvent(EventHandle);
-// }
 
 ResultStruct start_service(LPWSTR serviceName)
 {
@@ -393,7 +387,6 @@ ResultStruct bind_service(Dart_Port_DL port, LPWSTR serviceName)
     }
     return result;
     // else if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
-
 }
 
 ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceDisplayName, LPWSTR appPath)
@@ -621,17 +614,109 @@ ResultStruct get_version(LPWSTR serviceName)
     return result;
 }
 
-// ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName)
-// {
-//     status_change_dart_port = port;
-//     struct ResultStruct result;
+VOID CALLBACK NotifyCallback(PVOID pParameter)
+{
+    HRESULT hr = S_OK;
+    PSERVICE_NOTIFY pNotify = (PSERVICE_NOTIFY)pParameter;
+    PNOTIFY_CONTEXT pContext = (PNOTIFY_CONTEXT)pNotify->pContext;
+  
+    if (status_change_dart_port != 0)
+    {
+        ServiceStatusStruct *result = (ServiceStatusStruct *)malloc(sizeof(ServiceStatusStruct));
 
-//     result.status = true;
-//     result.code = GetLastError();
-//     result.message = L"Port set successfully";
+        result->dwCurrentState = pNotify->ServiceStatus.dwCurrentState;
 
-//     return result;
-// }
+        Dart_CObject msg;
+        msg.type = Dart_CObject_kInt64;
+
+        msg.value.as_int64 = (intptr_t)(result);
+
+        Dart_PostCObject_DL(status_change_dart_port, &msg);
+        LPWSTR rrrrr = GetLastErrorText();
+        LPWSTR sd = L"";
+    }
+}
+
+ResultStruct watch_service_status(LPWSTR serviceName)
+{
+
+  SC_HANDLE schService;
+    SC_HANDLE schSCManager;
+
+    struct ResultStruct result;
+    result.status = true;
+    result.code = 0;
+    result.message = L"Watching ended";
+
+    schSCManager = OpenSCManager(
+        NULL,              // machine (NULL == local)
+        NULL,              // database (NULL == default)
+        SC_MANAGER_CONNECT // access required
+    );
+    if (schSCManager)
+    {
+        schService = OpenService(schSCManager, serviceName, SERVICE_QUERY_STATUS);
+
+        if (schService)
+        {
+
+            DWORD dwError = ERROR_SUCCESS;
+            DWORD dwStatus;
+            DWORD dwMask;
+            NOTIFY_CONTEXT NotifyContext = {0};
+            SERVICE_NOTIFY snServiceNotify;
+            // Initialize callback context
+            NotifyContext.pszServiceName = serviceName;
+
+            // Intialize notification struct
+            snServiceNotify.dwVersion = SERVICE_NOTIFY_STATUS_CHANGE;
+            snServiceNotify.pfnNotifyCallback = (PFN_SC_NOTIFY_CALLBACK)NotifyCallback;
+            snServiceNotify.pContext = &NotifyContext;
+
+            // We care about changes to RUNNING and STOPPED states only
+            dwMask = SERVICE_NOTIFY_RUNNING | SERVICE_NOTIFY_STOPPED|SERVICE_NOTIFY_START_PENDING|SERVICE_NOTIFY_STOP_PENDING;
+            // Register for notification
+            while (TRUE)
+            {
+                dwStatus = NotifyServiceStatusChangeW(schService, dwMask, &snServiceNotify);
+
+                if (dwStatus == ERROR_SUCCESS)
+                {
+                    SleepEx(INFINITE, TRUE);
+                }
+                else
+                {
+                    result.status = false;
+                    result.code = GetLastError();
+                    result.message = GetLastErrorText();
+                    dwError = dwStatus;
+                    break;
+                }
+            }
+
+            CloseServiceHandle(schService);
+        }
+        else
+        {
+            result.status = false;
+            result.code = GetLastError();
+            result.message = GetLastErrorText();
+        }
+
+        CloseServiceHandle(schSCManager);
+    }
+    else
+    {
+        result.status = false;
+        result.code = GetLastError();
+        result.message = GetLastErrorText();
+    }
+    return result;   
+}
+void init_service(Dart_Port_DL port)
+{
+    status_change_dart_port = port;
+}
 
 //
 //

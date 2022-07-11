@@ -2,10 +2,16 @@
 #include "service.h"
 #include "include/result_struct.h"
 #include "include/win_service.h"
-// FFI_PLUGIN_EXPORT ResultStruct service_init_service(Dart_Port_DL port, wchar_t *serviceName)
-// {
-//   return  init_service(port, serviceName);
-// }
+
+FFI_PLUGIN_EXPORT ResultStruct service_watach_service_status( wchar_t *serviceName)
+{
+  return  watch_service_status(serviceName);
+}
+
+FFI_PLUGIN_EXPORT void service_init_service(Dart_Port_DL port)
+{
+  return  init_service(port);
+}
 
 FFI_PLUGIN_EXPORT ServiceStatusStruct service_get_service_status(wchar_t *serviceName)
 {

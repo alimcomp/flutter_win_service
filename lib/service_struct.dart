@@ -1,6 +1,8 @@
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 
+import 'service_status.dart';
+
 class StatusStruct extends Struct {
   @Int64()
   external int dwServiceType;
@@ -16,4 +18,8 @@ class StatusStruct extends Struct {
   external int dwCheckPoint;
   @Int64()
   external int dwWaitHint;
+
+  ServiceStatus get toServiceStatus {
+    return ServiceStatus(Status.fromInt(dwCurrentState));
+  }
 }

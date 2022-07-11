@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:service/service.dart' as service;
+import 'package:service/service_status.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,13 +21,16 @@ class _MyAppState extends State<MyApp> {
   late int sumResult;
   late Future<int> sumAsyncResult;
   late StreamSubscription statusSubscription;
+  ServiceStatus? serviceStatus;
   @override
   void initState() {
     super.initState();
-    // service.initService("GposSyncer");
-    // statusSubscription = service.notificationStream.listen((event) {
-    //   print(event);
-    // });
+    service.initService();
+    statusSubscription = service.serviceStatusStream.listen((event) {
+      setState(() {
+        serviceStatus = event;
+      });
+    });
   }
 
   @override
@@ -53,6 +57,12 @@ class _MyAppState extends State<MyApp> {
                   Center(
                     child: Column(
                       children: [
+                        if (serviceStatus != null) ...[
+                          Text(serviceStatus!.status.toString()),
+                          if (serviceStatus!.status == Status.stopPending ||
+                              serviceStatus!.status == Status.startPending)
+                            const CircularProgressIndicator(),
+                        ],
                         OutlinedButton(
                           onPressed: () {
                             try {
@@ -107,16 +117,16 @@ class _MyAppState extends State<MyApp> {
                         OutlinedButton(
                           onPressed: () {
                             try {
-                              // service.initService(
-                              //   "GposSyncer",
-                              // );
+                              service.watchService(
+                                "GposSyncer",
+                              );
                             } catch (e) {
                               print(e);
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                                   SnackBar(content: Text(e.toString())));
                             }
                           },
-                          child: const Text('init service'),
+                          child: const Text('watch service'),
                         ),
                         OutlinedButton(
                           onPressed: () async {

@@ -2,7 +2,8 @@
 #include "dart_api_dl.h"
 #include "result_struct.h"
 #include <windows.h>
-//ResultStruct init_service(Dart_Port_DL port, LPWSTR serviceName);
+ResultStruct watch_service_status(LPWSTR serviceName);
+void init_service(Dart_Port_DL port);
 ServiceStatusStruct get_service_status(LPWSTR serviceName);
 ResultStruct get_version(LPWSTR serviceName);
 ResultStruct start_service(LPWSTR serviceName);

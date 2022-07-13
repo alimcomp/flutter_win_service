@@ -6,6 +6,7 @@ ResultStruct watch_service_status(LPWSTR serviceName);
 void init_service(Dart_Port_DL port);
 ServiceStatusStruct get_service_status(LPWSTR serviceName);
 ResultStruct get_version(LPWSTR serviceName);
+ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode);
 ResultStruct start_service(LPWSTR serviceName);
 ResultStruct bind_service(Dart_Port_DL port,LPWSTR serviceName);
 ResultStruct install_service(LPWSTR serviceName,LPWSTR version,LPWSTR serviceDisplayName,LPWSTR appPath);

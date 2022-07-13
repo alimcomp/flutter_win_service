@@ -140,6 +140,17 @@ class _MyAppState extends State<MyApp> {
                           child: const Text('start service'),
                         ),
                         OutlinedButton(
+                          onPressed: () async {
+                            try {
+                              await service.reportError("GposSyncer", 200);
+                            } catch (e) {
+                              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                                  SnackBar(content: Text(e.toString())));
+                            }
+                          },
+                          child: const Text('stop service'),
+                        ),
+                        OutlinedButton(
                           onPressed: () {
                             try {
                               service.removeService("GposSyncer");

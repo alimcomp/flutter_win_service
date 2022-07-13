@@ -65,7 +65,6 @@ void ReportStatus(DWORD state)
         msg.value.as_int64 = (intptr_t)(result);
 
         Dart_PostCObject_DL(dart_port, &msg);
-   
     }
 }
 DWORD WINAPI HandlerEx(DWORD control, DWORD eventType, void *eventData, void *context)
@@ -91,16 +90,16 @@ DWORD WINAPI HandlerEx(DWORD control, DWORD eventType, void *eventData, void *co
 
 void ReportErrorStatus(DWORD errorCode)
 {
+
     g_CurrentState = SERVICE_STOPPED;
     SERVICE_STATUS serviceStatus = {
         SERVICE_WIN32_OWN_PROCESS,
         g_CurrentState,
-        0,
+        SERVICE_CONTROL_STOP,
         ERROR_SERVICE_SPECIFIC_ERROR,
         errorCode,
         0,
-        0,
-    };
+        0};
     SetServiceStatus(g_ServiceStatusHandle, &serviceStatus);
 }
 
@@ -198,6 +197,267 @@ ServiceStatusStruct get_service_status(LPWSTR serviceName)
     return result;
 }
 
+ResultStruct DoStopSvc(LPWSTR serviceName)
+{
+    struct ResultStruct result;
+    SC_HANDLE schService;
+    SC_HANDLE schSCManager;
+
+    SERVICE_STATUS_PROCESS ssp;
+    DWORD dwStartTime = GetTickCount();
+    DWORD dwBytesNeeded;
+    DWORD dwTimeout = 30000; // 30-second time-out
+    DWORD dwWaitTime;
+
+    // Get a handle to the SCM database.
+
+    schSCManager = OpenSCManager(
+        NULL,                   // local computer
+        NULL,                   // ServicesActive database
+        SC_MANAGER_ALL_ACCESS); // full access rights
+
+    if (schSCManager)
+    {
+        schService = OpenService(
+            schSCManager, // SCM database
+            serviceName,  // name of service
+            SERVICE_ALL_ACCESS);
+
+        if (schService)
+        {
+
+            if (QueryServiceStatusEx(
+                    schService,
+                    SC_STATUS_PROCESS_INFO,
+                    (LPBYTE)&ssp,
+                    sizeof(SERVICE_STATUS_PROCESS),
+                    &dwBytesNeeded))
+            {
+                if (ssp.dwCurrentState == SERVICE_STOPPED)
+                {
+                    result.status = false;
+                    result.code = 0;
+                    result.message = L"service already stoped";
+                }
+                else if (ssp.dwCurrentState == SERVICE_STOP_PENDING)
+                {
+                    // If a stop is pending, wait for it.
+
+                    while (ssp.dwCurrentState == SERVICE_STOP_PENDING)
+                    {
+                        printf("Service stop pending...\n");
+
+                        // Do not wait longer than the wait hint. A good interval is
+                        // one-tenth of the wait hint but not less than 1 second
+                        // and not more than 10 seconds.
+
+                        dwWaitTime = ssp.dwWaitHint / 10;
+
+                        if (dwWaitTime < 1000)
+                            dwWaitTime = 1000;
+                        else if (dwWaitTime > 10000)
+                            dwWaitTime = 10000;
+
+                        Sleep(dwWaitTime);
+
+                        if (QueryServiceStatusEx(
+                                schService,
+                                SC_STATUS_PROCESS_INFO,
+                                (LPBYTE)&ssp,
+                                sizeof(SERVICE_STATUS_PROCESS),
+                                &dwBytesNeeded))
+                        {
+                            if (ssp.dwCurrentState == SERVICE_STOPPED)
+                            {
+                                result.status = true;
+                                result.code = 0;
+                                result.message = L"service stoped successfully";
+                                break;
+                            }
+
+                            else if (GetTickCount() - dwStartTime > dwTimeout)
+                            {
+                                printf("Service stop timed out.\n");
+
+                                result.status = false;
+                                result.code = 1;
+                                result.message = L"timeout";
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            result.status = false;
+                            result.code = GetLastError();
+                            result.message = GetLastErrorText();
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Send a stop code to the service.
+                    if (ControlService(
+                            schService,
+                            SERVICE_CONTROL_STOP,
+                            (LPSERVICE_STATUS)&ssp))
+                    {
+                        // Wait for the service to stop.
+
+                        while (ssp.dwCurrentState != SERVICE_STOPPED)
+                        {
+                            Sleep(ssp.dwWaitHint);
+                            if (QueryServiceStatusEx(
+                                    schService,
+                                    SC_STATUS_PROCESS_INFO,
+                                    (LPBYTE)&ssp,
+                                    sizeof(SERVICE_STATUS_PROCESS),
+                                    &dwBytesNeeded))
+                            {
+                                if (ssp.dwCurrentState == SERVICE_STOPPED)
+                                {
+                                    result.status = true;
+                                    result.code = 0;
+                                    result.message = L"service stoped successfully";
+                                    break;
+                                }
+                                else if (GetTickCount() - dwStartTime > dwTimeout)
+                                {
+                                    result.status = false;
+                                    result.code = 1;
+                                    result.message = L"timeout";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                result.status = false;
+                                result.code = GetLastError();
+                                result.message = GetLastErrorText();
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        result.status = false;
+                        result.code = GetLastError();
+                        result.message = GetLastErrorText();
+                    }
+                }
+            }
+            else
+            {
+                result.status = false;
+                result.code = GetLastError();
+                result.message = GetLastErrorText();
+            }
+
+            CloseServiceHandle(schService);
+        }
+        else
+        {
+            result.status = false;
+            result.code = GetLastError();
+            result.message = GetLastErrorText();
+        }
+
+        CloseServiceHandle(schSCManager);
+    }
+    else
+    {
+        result.status = false;
+        result.code = GetLastError();
+        result.message = GetLastErrorText();
+    }
+    return result;
+}
+
+ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode)
+{
+    return DoStopSvc(serviceName);
+    // struct ResultStruct result;
+    // SC_HANDLE schService;
+    // SC_HANDLE schSCManager;
+
+    // SERVICE_STATUS ssStatus;
+
+    // schSCManager = OpenSCManager(
+    //     NULL,                 // machine (NULL == local)
+    //     NULL,                 // database (NULL == default)
+    //     SC_MANAGER_ALL_ACCESS // access required
+    // );
+    // if (schSCManager)
+    // {
+    //     schService = OpenService(
+    //         schSCManager,      // SCManager database
+    //         serviceName,       // name of service
+    //         SERVICE_ALL_ACCESS // desired access
+    //     );                     // no password
+
+    //     if (schService)
+    //     {
+    //         g_CurrentState = SERVICE_STOPPED;
+    //         SERVICE_STATUS serviceStatus = {
+    //             SERVICE_WIN32_OWN_PROCESS,
+    //             g_CurrentState,
+    //             0,
+    //             ERROR_SERVICE_SPECIFIC_ERROR,
+    //             errorCode,
+    //             0,
+    //             0,
+    //         };
+
+    //         if (ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
+    //         {
+    //             result.status = true;
+    //             result.code = 0;
+    //         }
+    //         else
+    //         {
+    //             result.status = false;
+    //             result.code = GetLastError();
+    //             result.message = GetLastErrorText();
+    //         }
+    //         CloseServiceHandle(schService);
+    //     }
+    //     else
+    //     {
+    //         result.status = false;
+    //         result.code = GetLastError();
+    //         result.message = GetLastErrorText();
+    //     }
+
+    //     CloseServiceHandle(schSCManager);
+    // }
+    // else
+    // {
+    //     result.status = false;
+    //     result.code = GetLastError();
+    //     result.message = GetLastErrorText();
+    // }
+    // SleepEx(10000, true);
+
+    // return result;
+}
+
+
+
+// BOOL WINAPI ControlHandler(DWORD dwCtrlType)
+// {
+//     switch (dwCtrlType)
+//     {
+//     case CTRL_BREAK_EVENT:  // use Ctrl+C or Ctrl+Break to simulate
+//     case CTRL_C_EVENT:      // SERVICE_CONTROL_STOP in debug mode
+
+//       //  ServiceStop();
+//         return TRUE;
+//         break;
+
+//     }
+//     return FALSE;
+// }
+
 ResultStruct start_service(LPWSTR serviceName)
 {
     DWORD dwSize = 0;
@@ -230,6 +490,7 @@ ResultStruct start_service(LPWSTR serviceName)
 
         if (schService)
         {
+
             // service opend so try to start it
             if (!StartService(schService, 0, NULL))
             {
@@ -619,7 +880,7 @@ VOID CALLBACK NotifyCallback(PVOID pParameter)
     HRESULT hr = S_OK;
     PSERVICE_NOTIFY pNotify = (PSERVICE_NOTIFY)pParameter;
     PNOTIFY_CONTEXT pContext = (PNOTIFY_CONTEXT)pNotify->pContext;
-  
+
     if (status_change_dart_port != 0)
     {
         ServiceStatusStruct *result = (ServiceStatusStruct *)malloc(sizeof(ServiceStatusStruct));
@@ -640,7 +901,7 @@ VOID CALLBACK NotifyCallback(PVOID pParameter)
 ResultStruct watch_service_status(LPWSTR serviceName)
 {
 
-  SC_HANDLE schService;
+    SC_HANDLE schService;
     SC_HANDLE schSCManager;
 
     struct ResultStruct result;
@@ -674,7 +935,7 @@ ResultStruct watch_service_status(LPWSTR serviceName)
             snServiceNotify.pContext = &NotifyContext;
 
             // We care about changes to RUNNING and STOPPED states only
-            dwMask = SERVICE_NOTIFY_RUNNING | SERVICE_NOTIFY_STOPPED|SERVICE_NOTIFY_START_PENDING|SERVICE_NOTIFY_STOP_PENDING;
+            dwMask = SERVICE_NOTIFY_RUNNING | SERVICE_NOTIFY_STOPPED | SERVICE_NOTIFY_START_PENDING | SERVICE_NOTIFY_STOP_PENDING;
             // Register for notification
             while (TRUE)
             {
@@ -711,82 +972,11 @@ ResultStruct watch_service_status(LPWSTR serviceName)
         result.code = GetLastError();
         result.message = GetLastErrorText();
     }
-    return result;   
+    return result;
 }
 void init_service(Dart_Port_DL port)
 {
     status_change_dart_port = port;
 }
 
-//
-//
-//
-//
-/////////////////////////////////////////////////////////////////////
-////
-////  The following code is for running the service as a console app
-////
-//
-//
-////
-////  FUNCTION: CmdDebugService(int argc, char ** argv)
-////
-////  PURPOSE: Runs the service as a console application
-////
-////  PARAMETERS:
-////    argc - number of command line arguments
-////    argv - array of command line arguments
-////
-////  RETURN VALUE:
-////    none
-////
-////  COMMENTS:
-////
-// void CmdDebugService(int argc, char** argv)
-//{
-//     DWORD dwArgc;
-//     LPTSTR* lpszArgv;
-//
-//#ifdef UNICODE
-//     lpszArgv = CommandLineToArgvW(GetCommandLineW(), &(dwArgc));
-//#else
-//     dwArgc = (DWORD)argc;
-//     lpszArgv = argv;
-//#endif
-//
-//     _tprintf_s(TEXT("Debugging %s.\n"), TEXT(SZSERVICEDISPLAYNAME));
-//
-//     SetConsoleCtrlHandler(ControlHandler, TRUE);
-//
-//     ServiceStart(dwArgc, lpszArgv);
-// }
-//
-//
-////
-////  FUNCTION: ControlHandler ( DWORD dwCtrlType )
-////
-////  PURPOSE: Handled console control events
-////
-////  PARAMETERS:
-////    dwCtrlType - type of control event
-////
-////  RETURN VALUE:
-////    True - handled
-////    False - unhandled
-////
-////  COMMENTS:
-////
-// BOOL WINAPI ControlHandler(DWORD dwCtrlType)
-//{
-//     switch (dwCtrlType)
-//     {
-//     case CTRL_BREAK_EVENT:  // use Ctrl+C or Ctrl+Break to simulate
-//     case CTRL_C_EVENT:      // SERVICE_CONTROL_STOP in debug mode
-//         _tprintf_s(TEXT("Stopping %s.\n"), TEXT(SZSERVICEDISPLAYNAME));
-//         ServiceStop();
-//         return TRUE;
-//         break;
-//
-//     }
-//     return FALSE;
-// }
+

@@ -12,6 +12,40 @@ Stream<ServiceStatus> get serviceStatusStream => _bindings.serviceStatusStream;
 
 void initService() => _bindings.initService();
 
+Future<void> reportError(String serviceName, int errorCode) async {
+  /// Where I listen to the message from startServiceIsolate
+  Completer<void> resultComplater = Completer();
+  final mainReceivePort = ReceivePort();
+  Isolate? test;
+
+  mainReceivePort.listen((message) {
+    if (message is SendPort) {
+      message.send(serviceName);
+    } else if (message is ResultStruct) {
+      if (!message.status) {
+        resultComplater.completeError(message.exception);
+      } else {
+        resultComplater.complete();
+      }
+      test?.kill();
+      // todo think about canclation
+    }
+  });
+
+  test = await Isolate.spawn((SendPort sendPort) async {
+    final ReceivePort reportErrorIsolatePort = ReceivePort();
+    reportErrorIsolatePort.listen((message) {
+      if (message is String) {
+        final result = _bindings.reportError(message, 0);
+        sendPort.send(result);
+      }
+    });
+    sendPort.send(reportErrorIsolatePort.sendPort);
+  }, mainReceivePort.sendPort);
+
+  return resultComplater.future;
+}
+
 Future<void> watchService(String serviceName) async {
   /// Where I listen to the message from startServiceIsolate
   Completer<void> resultComplater = Completer();

@@ -60,7 +60,8 @@ class ServiceBindings {
     // Call Dart_InitializeApiDL with NativeApi.initializeApiDLData
     final pub = ReceivePort()
       ..listen((message) async {
-        final pointer = ffi.Pointer<ServiceStatusStruct>.fromAddress(message as int);
+        final pointer =
+            ffi.Pointer<ServiceStatusStruct>.fromAddress(message as int);
         final ref = pointer.ref;
         _serviceStatusCtrl.add(ref.toServiceStatus);
         // calloc.free(pointer);
@@ -69,6 +70,21 @@ class ServiceBindings {
       pub.sendPort.nativePort,
     );
   }
+
+  ///
+  ///service_report_service_error
+  ///
+
+  late final _reportErrorPtr = _lookup<
+      ffi.NativeFunction<
+          ResultStruct Function(
+              ffi.Pointer<Utf16>, ffi.Int64)>>("service_report_service_error");
+  late final _reportError = _reportErrorPtr
+      .asFunction<ResultStruct Function(ffi.Pointer<Utf16>, int)>();
+  ResultStruct reportError(String serviceName, int errorCode) =>
+      _reportError(serviceName.toNativeUtf16(), errorCode);
+
+  //(LPWSTR serviceName, DWORD errorCode)
 
   ///
   ///service_watach_service_status

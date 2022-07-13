@@ -21,6 +21,7 @@
 FFI_PLUGIN_EXPORT ResultStruct service_watach_service_status(wchar_t *serviceName);
 FFI_PLUGIN_EXPORT void service_init_service(Dart_Port_DL port);
 FFI_PLUGIN_EXPORT ServiceStatusStruct service_get_service_status(wchar_t *serviceName);
+FFI_PLUGIN_EXPORT ResultStruct service_report_service_error(LPWSTR serviceName, DWORD errorCode);
 FFI_PLUGIN_EXPORT ResultStruct service_start_service(wchar_t *serviceName);
 FFI_PLUGIN_EXPORT ResultStruct service_get_version(wchar_t *serviceName);
 FFI_PLUGIN_EXPORT ResultStruct service_bind_service(Dart_Port_DL port, wchar_t *serviceName);

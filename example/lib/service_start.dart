@@ -7,28 +7,33 @@ import 'package:service/service_status.dart';
 
 void main(List<String> args) async {
   var serviceName = "GposSyncer";
-  service.bindService(serviceName);
   Isolate? test;
 
-  await for (var event in service.serviceStream) {
+  service.initService();
+  service.watchService(serviceName);
+  service.serviceStatusStream.listen((event) async {
     if (event.status == Status.running) {
-      Isolate.spawn(startTask, "").then((value) => test = value);
-    } else if (event.status == Status.stopped) {
+      test = await Isolate.spawn(startBackGroundTask, "");
+    } else {
       test?.kill();
     }
-  }
+  });
+
+  await Isolate.spawn(startTask, "");
 }
 
-startTask(String message)  {
+Future<void> startTask(String message) async {
+  service.bindService("GposSyncer");
+}
+
+Future<void> startBackGroundTask(String message) async {
   final testf = File(
-      'C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\t2541.txt');
-
-
-  Timer.periodic(Duration(seconds: 1), (timer) async {
-    testf.writeAsString("${timer.tick}");
+      'C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\t2.txt');
+  var timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    testf.writeAsStringSync("\n${timer.tick}", mode: FileMode.append);
     if (timer.tick == 100) {
-      testf.writeAsString("end meeted");
-      service.reportError("GposSyncer", 254);
+      testf.writeAsStringSync("error happend", mode: FileMode.append);
+      service.reportError("GposSyncer", 500);
     }
   });
 }

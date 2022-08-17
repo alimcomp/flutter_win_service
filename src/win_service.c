@@ -460,12 +460,8 @@ ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode)
 
 ResultStruct start_service(LPWSTR serviceName)
 {
-    DWORD dwSize = 0;
-    BYTE *pVersionInfo = NULL;
-    VS_FIXEDFILEINFO *pFileInfo = NULL;
-    UINT pLenFileInfo = 0;
-    LPWSTR pFilePath = L"C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\service_start.exe";
-
+ 
+    
     struct ResultStruct result;
     SC_HANDLE schService;
     SC_HANDLE schSCManager;

@@ -87,12 +87,12 @@ class ServiceBindings {
   //(LPWSTR serviceName, DWORD errorCode)
 
   ///
-  ///service_watach_service_status
+  ///service_watch_service_status
   ///
 
   late final _watchServicePtr =
       _lookup<ffi.NativeFunction<ResultStruct Function(ffi.Pointer<Utf16>)>>(
-          "service_watach_service_status");
+          "service_watch_service_status");
   late final _watchService =
       _watchServicePtr.asFunction<ResultStruct Function(ffi.Pointer<Utf16>)>();
   ResultStruct watchService(String serviceName) {

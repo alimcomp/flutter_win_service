@@ -3,7 +3,7 @@
 #include "include/result_struct.h"
 #include "include/win_service.h"
 
-FFI_PLUGIN_EXPORT ResultStruct service_watach_service_status(wchar_t *serviceName)
+FFI_PLUGIN_EXPORT ResultStruct service_watch_service_status(wchar_t *serviceName)
 {
   return watch_service_status(serviceName);
 }

@@ -130,9 +130,14 @@ Stream<ServiceStatus> get serviceStream => _bindings.serviceStream;
 
 /// The dynamic library in which the symbols for [ServiceBindings] can be found.
 final DynamicLibrary _dylib = () {
+  const bool kReleaseMode = bool.fromEnvironment('dart.vm.product');
   if (Platform.isWindows) {
-    return DynamicLibrary.open(
-        'C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\build\\windows\\runner\\Debug\\service.dll');
+    if (kReleaseMode) {
+      return DynamicLibrary.open('$_libName.dll');
+    } else {
+      return DynamicLibrary.open(
+          'C:\\Users\\mohammadi\\Desktop\\My files\\service\\service\\example\\build\\windows\\runner\\Debug\\service.dll');
+    }
   }
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
 }();

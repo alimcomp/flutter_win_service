@@ -91,7 +91,7 @@ class _MyAppState extends State<MyApp> {
                                 "GposSyncer",
                                 "1.1.0.1",
                                 "GPOS SYNC",
-                                "C:\\Users\\mohammadi\\Desktop\\service\\service\\example\\lib\\service_start.exe",
+                                "c:\\users\\mohammadi\\desktop\\my files\\service\\service\\example\\build\\windows\\runner\\debug\\service_start.exe",
                               );
                             } catch (e) {
                               print(e);

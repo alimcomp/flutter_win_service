@@ -12,7 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  service:
+  win_service:
     path: ../
 
   cupertino_icons: ^1.0.2

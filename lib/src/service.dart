@@ -3,10 +3,11 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:service/result_struct.dart';
-import 'package:service/service_status.dart';
+import 'package:path/path.dart' as path;
 
+import 'result_struct.dart';
 import 'service_bindings_generated.dart';
+import 'service_status.dart';
 
 Stream<ServiceStatus> get serviceStatusStream => _bindings.serviceStatusStream;
 
@@ -135,8 +136,10 @@ final DynamicLibrary _dylib = () {
     if (kReleaseMode) {
       return DynamicLibrary.open('$_libName.dll');
     } else {
-      return DynamicLibrary.open(
-          'C:\\Users\\mohammadi\\Desktop\\My files\\service\\service\\example\\build\\windows\\runner\\Debug\\service.dll');
+      final currentExe = Platform.resolvedExecutable;
+      final basePath = path.basename(currentExe);
+      final libPath = path.join(basePath, _libName);
+      return DynamicLibrary.open(libPath);
     }
   }
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');

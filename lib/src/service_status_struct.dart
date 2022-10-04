@@ -22,9 +22,9 @@
 
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
-import 'package:service/service_status.dart';
 
 import 'service_exception.dart';
+import 'service_status.dart';
 
 class ServiceStatusStruct extends Struct {
   @Bool()

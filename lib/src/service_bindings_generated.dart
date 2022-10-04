@@ -10,9 +10,9 @@ import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:isolate';
 import 'package:ffi/ffi.dart';
-import 'package:service/service_status.dart';
 
 import 'result_struct.dart';
+import 'service_status.dart';
 import 'service_status_struct.dart';
 import 'service_struct.dart';
 

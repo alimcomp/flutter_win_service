@@ -21,6 +21,7 @@
 // } ServiceStatusStruct;
 
 import 'dart:ffi';
+
 import 'package:ffi/ffi.dart';
 
 import 'service_exception.dart';

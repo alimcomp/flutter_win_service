@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:win_service/win_service.dart' as service;
-import 'package:win_service/win_service.dart';
+import 'package:service/service.dart' as service;
+import 'package:service/service.dart';
 
 void main() {
   runApp(const MyApp());

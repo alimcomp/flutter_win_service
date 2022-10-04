@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:win_service/win_service.dart' as service;
-import 'package:win_service/win_service.dart';
+import 'package:service/service.dart' as service;
+import 'package:service/service.dart';
 
 void main(List<String> args) async {
   var serviceName = "GposSyncer";

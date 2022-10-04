@@ -133,14 +133,14 @@ Stream<ServiceStatus> get serviceStream => _bindings.serviceStream;
 final DynamicLibrary _dylib = () {
   const bool kReleaseMode = bool.fromEnvironment('dart.vm.product');
   if (Platform.isWindows) {
-    if (kReleaseMode) {
-      return DynamicLibrary.open('$_libName.dll');
-    } else {
-      final currentExe = Platform.resolvedExecutable;
-      final basePath = path.basename(currentExe);
-      final libPath = path.join(basePath, _libName);
-      return DynamicLibrary.open(libPath);
-    }
+    // if (kReleaseMode) {
+    return DynamicLibrary.open('$_libName.dll');
+    // } else {
+    //   final currentExe = Platform.resolvedExecutable;
+    //   final basePath = path.dirname(currentExe);
+    //   final libPath = path.join(basePath, '$_libName.dll');
+    //   return DynamicLibrary.open(libPath);
+    // }
   }
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
 }();

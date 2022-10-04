@@ -1,4 +1,4 @@
-name: win_service
+name: service
 description: A new Flutter FFI plugin project.
 version: 0.1.0
 

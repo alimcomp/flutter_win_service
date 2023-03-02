@@ -122,9 +122,22 @@ String getVersion(String serviceName) => _bindings.getVersion(serviceName);
 //startService(String serviceName) => _bindings.startService(serviceName);
 removeService(String serviceName) => _bindings.removeService(serviceName);
 bindService(String serviceName) => _bindings.bindService(serviceName);
-installService(String serviceName, String version, String serviceDisplayName,
-        String appPath) =>
-    _bindings.installService(serviceName, version, serviceDisplayName, appPath);
+installService(
+  String serviceName,
+  String version,
+  String serviceDisplayName,
+  String appPath, {
+  String username = '',
+  String password = '',
+}) =>
+    _bindings.installService(
+      serviceName,
+      version,
+      serviceDisplayName,
+      appPath,
+      username: username,
+      password: password,
+    );
 
 const String _libName = 'service';
 Stream<ServiceStatus> get serviceStream => _bindings.serviceStream;

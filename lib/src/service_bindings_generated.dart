@@ -184,17 +184,27 @@ class ServiceBindings {
               ffi.Pointer<Utf16>,
               ffi.Pointer<Utf16>,
               ffi.Pointer<Utf16>,
+              ffi.Pointer<Utf16>,
+              ffi.Pointer<Utf16>,
               ffi.Pointer<Utf16>)>>("service_install_service");
   late final _installService = _installServicePtr.asFunction<
-      ResultStruct Function(ffi.Pointer<Utf16>, ffi.Pointer<Utf16>,
-          ffi.Pointer<Utf16>, ffi.Pointer<Utf16>)>();
+      ResultStruct Function(
+          ffi.Pointer<Utf16>,
+          ffi.Pointer<Utf16>,
+          ffi.Pointer<Utf16>,
+          ffi.Pointer<Utf16>,
+          ffi.Pointer<Utf16>,
+          ffi.Pointer<Utf16>)>();
   installService(String serviceName, String version, String serviceDisplayName,
-      String appPath) {
+      String appPath,
+      {String username ='', String password=''}) {
     final result = _installService(
       serviceName.toNativeUtf16(),
       version.toNativeUtf16(),
       serviceDisplayName.toNativeUtf16(),
       appPath.toNativeUtf16(),
+      username.toNativeUtf16(),
+      password.toNativeUtf16(),
     );
     if (!result.status) throw result.exception;
   }

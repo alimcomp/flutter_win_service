@@ -9,7 +9,7 @@ ResultStruct get_version(LPWSTR serviceName);
 ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode);
 ResultStruct start_service(LPWSTR serviceName);
 ResultStruct bind_service(Dart_Port_DL port,LPWSTR serviceName);
-ResultStruct install_service(LPWSTR serviceName,LPWSTR version,LPWSTR serviceDisplayName,LPWSTR appPath);
+ResultStruct install_service(LPWSTR serviceName,LPWSTR version,LPWSTR serviceDisplayName,LPWSTR appPath,LPWSTR username, LPWSTR password);
 ResultStruct remove_service(LPWSTR serviceName);
 
 // LPTSTR GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)

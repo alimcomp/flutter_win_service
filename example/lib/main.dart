@@ -1,13 +1,22 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:service/service.dart' as service;
 import 'package:service/service.dart';
+import 'package:path/path.dart' as path;
+part 'winows_service_main.dart';
 
-void main() {
-  runApp(const MyApp());
+
+@pragma('vm:entry-point')
+void main(List<String> args) async {
+  if (args.contains('-s')) {
+    await startWindowsService(args);
+  } else {
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -82,17 +91,13 @@ class _MyAppState extends State<MyApp> {
                         OutlinedButton(
                           onPressed: () {
                             try {
-                              //  String dir = Directory.current.path;
-                              final dir = Platform.resolvedExecutable;
-                              final lastIndex = dir.lastIndexOf('\\');
-                              final basePath = dir.substring(0, lastIndex);
-
-                              service.installService(
-                                "GposSyncer",
-                                "1.1.0.1",
-                                "GPOS SYNC",
-                                "c:\\users\\mohammadi\\desktop\\my files\\service\\service\\example\\build\\windows\\runner\\debug\\service_start.exe",
-                              );
+              
+                              final currentExe = Platform.resolvedExecutable;
+                              // String tempPath = tempDir.path;
+                              service.installService(serviceName, 'version',
+                                  'GposSyncer', "$currentExe -s",
+                                  username: "username",
+                                  password: "password");
                             } catch (e) {
                               print(e);
                               ScaffoldMessenger.maybeOf(context)?.showSnackBar(

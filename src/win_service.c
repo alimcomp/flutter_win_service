@@ -441,8 +441,6 @@ ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode)
     // return result;
 }
 
-
-
 // BOOL WINAPI ControlHandler(DWORD dwCtrlType)
 // {
 //     switch (dwCtrlType)
@@ -460,8 +458,7 @@ ResultStruct report_service_error(LPWSTR serviceName, DWORD errorCode)
 
 ResultStruct start_service(LPWSTR serviceName)
 {
- 
-    
+
     struct ResultStruct result;
     SC_HANDLE schService;
     SC_HANDLE schSCManager;
@@ -646,7 +643,7 @@ ResultStruct bind_service(Dart_Port_DL port, LPWSTR serviceName)
     // else if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
 }
 
-ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceDisplayName, LPWSTR appPath)
+ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceDisplayName, LPWSTR appPath, LPWSTR username, LPWSTR password)
 {
     struct ResultStruct result;
     SC_HANDLE schService;
@@ -660,19 +657,20 @@ ResultStruct install_service(LPWSTR serviceName, LPWSTR version, LPWSTR serviceD
     if (schSCManager)
     {
         schService = CreateService(
-            schSCManager,              // SCManager database
-            serviceName,               // name of service
-            serviceDisplayName,        // name to display
-            SERVICE_ALL_ACCESS,        // desired access
-            SERVICE_WIN32_OWN_PROCESS, // service type
-            SERVICE_DEMAND_START,      // start type
-            SERVICE_ERROR_NORMAL,      // error control type
-            appPath,                   // service's binary
-            NULL,                      // no load ordering group
-            NULL,                      // no tag identifier
-            L"",                       // dependencies
-            NULL,                      // LocalSystem account
-            NULL);                     // no password
+            schSCManager,                                                // SCManager database
+            serviceName,                                                 // name of service
+            serviceDisplayName,                                          // name to display
+            SERVICE_ALL_ACCESS,                                          // desired access
+            SERVICE_WIN32_OWN_PROCESS,                                   // service type
+            SERVICE_DEMAND_START,                                        // start type
+            SERVICE_ERROR_NORMAL,                                        // error control type
+            appPath,                                                     // service's binary
+            NULL,                                                        // no load ordering group
+            NULL,                                                        // no tag identifier
+            L"",                                                         // dependencies
+             (username == NULL || username[0] == 0) ? NULL : username, // LocalSystem account
+             (password == NULL || password[0] == 0) ? NULL : password  // no password
+        );
 
         if (schService)
         {
@@ -974,5 +972,3 @@ void init_service(Dart_Port_DL port)
 {
     status_change_dart_port = port;
 }
-
-

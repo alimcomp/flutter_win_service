@@ -38,10 +38,10 @@ FFI_PLUGIN_EXPORT ResultStruct service_bind_service(Dart_Port_DL port, wchar_t *
   return bind_service(port, serviceName);
 }
 
-FFI_PLUGIN_EXPORT ResultStruct service_install_service(wchar_t *serviceName, wchar_t *version, wchar_t *serviceDisplayName, wchar_t *appPath)
+FFI_PLUGIN_EXPORT ResultStruct service_install_service(wchar_t *serviceName, wchar_t *version, wchar_t *serviceDisplayName, wchar_t *appPath,wchar_t *username, wchar_t *password)
 {
 
-  return install_service(serviceName, version, serviceDisplayName, appPath);
+  return install_service(serviceName, version, serviceDisplayName, appPath,username,password);
 }
 FFI_PLUGIN_EXPORT ResultStruct service_remove_service(wchar_t *serviceName)
 {
